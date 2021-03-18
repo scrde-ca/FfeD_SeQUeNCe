@@ -83,9 +83,17 @@ def start_server(ip, port, client_num=4, formalism="KET",
         c, addr = s.accept()
         sockets.append(c)
 
+    connections = {}
+    epoll = select.epoll()
+    for s in sockets:
+        epoll.register(s.fileno(), select.EPOLLIN | select.EPOLLET)
+        connections[s.fileno()] = s
+
     while sockets:
-        readable, writeable, exceptional = select.select(sockets, [], [], 1)
-        for s in readable:
+        # readable, writeable, exceptional = select.select(sockets, [], [], 1)
+        events = epoll.poll()
+        for fileno, event in events:
+            s = connections[fileno]
             msgs = recv_msg_with_length(s)
             for msg in msgs:
                 return_val = None
