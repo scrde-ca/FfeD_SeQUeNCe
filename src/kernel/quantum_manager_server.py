@@ -6,6 +6,7 @@ from json import loads, dumps
 import select
 from typing import List, Dict
 from time import time
+from random import randint
 
 from .p_quantum_manager import ParallelQuantumManagerKet, \
     ParallelQuantumManagerDensity
@@ -102,7 +103,30 @@ def start_server(ip, port, client_num=4, formalism="KET",
         readable, writeable, exceptional = select.select(sockets, [], [], 1)
         for s in readable:
             msgs = recv_msg_with_length(s)
+            if msgs is None:
+                sockets = []
+                break
+
+            msg_list = []
             for msg in msgs:
+                if msg["type"] == "SET":
+                    msg_list.append(
+                        QuantumManagerMessage(QuantumManagerMsgType.SET, [],
+                                              msg["args"]))
+                elif msg["type"] == "GET":
+                    msg_list.append(
+                        QuantumManagerMessage(QuantumManagerMsgType.GET, [],
+                                              msg["args"]))
+                elif msg["type"] == "RUN":
+                    msg_list.append(
+                        QuantumManagerMessage(QuantumManagerMsgType.RUN, [],
+                                              msg["args"]))
+                elif msg["type"] == "CLOSE":
+                    msg_list.append(
+                        QuantumManagerMessage(QuantumManagerMsgType.CLOSE, [],
+                                              msg["args"]))
+
+            for msg in msg_list:
                 return_val = None
 
                 tick = time()
@@ -112,20 +136,26 @@ def start_server(ip, port, client_num=4, formalism="KET",
                     break
 
                 elif msg.type == QuantumManagerMsgType.GET:
-                    assert len(msg.args) == 0
-                    return_val = qm.get(msg.keys[0])
+                    # assert len(msg.args) == 0
+                    return_val = randint(0, 1)
+                    # return_val = qm.get(msg.keys[0])
 
                 elif msg.type == QuantumManagerMsgType.RUN:
-                    assert len(msg.args) == 2
-                    circuit, keys = msg.args
-                    return_val = qm.run_circuit(circuit, keys)
-                    if len(return_val) == 0:
-                        return_val = None
+                    # assert len(msg.args) == 2
+                    # circuit, keys = msg.args
+                    # return_val = qm.run_circuit(circuit, keys)
+                    # if len(return_val) == 0:
+                    #     return_val = None
+
+                    if msg.args[0] > 0:
+                        return_val = [randint(0, 1) for _ in
+                                      range(msg.args[0])]
 
                 elif msg.type == QuantumManagerMsgType.SET:
-                    assert len(msg.args) == 1
-                    amplitudes = msg.args[0]
-                    qm.set(msg.keys, amplitudes)
+                    # assert len(msg.args) == 1
+                    # amplitudes = msg.args[0]
+                    # qm.set(msg.keys, amplitudes)
+                    pass
 
                 elif msg.type == QuantumManagerMsgType.REMOVE:
                     assert len(msg.keys) == 1

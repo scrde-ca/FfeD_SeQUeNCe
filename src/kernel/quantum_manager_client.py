@@ -194,7 +194,10 @@ class QuantumManagerClient():
 
     def flush_message_buffer(self):
         tick = time()
-        send_msg_with_length(self.socket, self.message_buffer)
+        _msg = []
+        for m in self.message_buffer:
+            _msg.append(m.serialize())
+        send_msg_with_length(self.socket, _msg)
         self.io_time += time() - tick
         self.message_buffer = []
 
