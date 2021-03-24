@@ -2,9 +2,9 @@ from enum import Enum, auto
 import socket
 import argparse
 from ipaddress import ip_address
-from pickle import loads, dumps
+from json import loads, dumps
 import select
-from typing import List
+from typing import List, Dict
 from time import time
 
 from .p_quantum_manager import ParallelQuantumManagerKet, \
@@ -53,13 +53,28 @@ class QuantumManagerMessage():
         args (List[any]): list of other arguments for request
     """
 
-    def __init__(self, msg_type: QuantumManagerMsgType, keys: 'List[int]', args: 'List[Any]'):
+    def __init__(self, msg_type: QuantumManagerMsgType, keys: 'List[int]',
+                 args: 'List[Any]'):
         self.type = msg_type
         self.keys = keys
         self.args = args
 
     def __repr__(self):
         return str(self.type) + ' ' + str(self.args)
+
+    def serialize(self) -> Dict:
+        info = {"type": self.type.name}
+        if self.type == QuantumManagerMsgType.SET:
+            info["args"] = []
+        elif self.type == QuantumManagerMsgType.RUN:
+            info["args"] = [len(self.args[0].measured_qubits)]
+        elif self.type == QuantumManagerMsgType.GET:
+            info["args"] = [1]
+        elif self.type == QuantumManagerMsgType.CLOSE:
+            info["args"] = []
+        else:
+            raise NotImplementedError
+        return info
 
 
 def start_server(ip, port, client_num=4, formalism="KET",

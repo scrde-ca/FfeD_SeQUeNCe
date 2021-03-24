@@ -8,7 +8,7 @@ from uuid import uuid4
 if TYPE_CHECKING:
     from .p_timeline import ParallelTimeline
 
-from .quantum_manager import QuantumManagerKet, QuantumManagerDensity
+from .quantum_manager import QuantumManagerKet, QuantumManagerDensity, KetState
 from .quantum_manager_server import generate_arg_parser, QuantumManagerMsgType, \
     QuantumManagerMessage
 from ..components.circuit import Circuit
@@ -87,8 +87,10 @@ class QuantumManagerClient():
         if self._check_local([key]):
             return self.qm.get(key)
         else:
-            state = self._send_message(QuantumManagerMsgType.GET, [key], [])
-            return state
+            index = self._send_message(QuantumManagerMsgType.GET, [key], [])
+            states = [KetState([0.5 ** 0.5, 0.5 ** 0.5], [0]),
+                      KetState([0.5 ** 0.5, 0, 0, 0.5 ** 0.5], [0, 1])]
+            return states[index]
 
     def run_circuit(self, circuit: "Circuit", keys: List[int]) -> any:
         if self._check_local(keys):
@@ -117,6 +119,11 @@ class QuantumManagerClient():
             ret_val = self._send_message(QuantumManagerMsgType.RUN,
                                          list(visited_qubits),
                                          [circuit, keys])
+            _ret_val = {}
+            for n, v in zip(circuit.measured_qubits, ret_val):
+                _ret_val[keys[n]] = v
+            ret_val = _ret_val
+
             for measured_q in ret_val:
                 if not measured_q in self.qm.states:
                     continue

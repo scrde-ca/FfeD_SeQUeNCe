@@ -1,5 +1,4 @@
-import select
-from pickle import dumps, loads
+from json import dumps, loads
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -10,7 +9,10 @@ BYTE_ORDER = "big"
 
 
 def send_msg_with_length(socket: "socket", msg: Any):
-    msg_byte = dumps(msg)
+    _msg = []
+    for m in msg:
+        _msg.append(m.serialize())
+    msg_byte = str.encode(dumps(_msg))
     data = len(msg_byte).to_bytes(LEN_BYTE_LEN, BYTE_ORDER) + msg_byte
     socket.sendall(data)
 
