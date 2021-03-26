@@ -5,7 +5,7 @@ from ipaddress import ip_address
 from pickle import loads, dumps
 import select
 from typing import List
-from time import time
+from time import time, sleep
 
 from .p_quantum_manager import ParallelQuantumManagerKet, \
     ParallelQuantumManagerDensity
@@ -63,7 +63,7 @@ class QuantumManagerMessage():
 
 
 def start_server(ip, port, client_num=4, formalism="KET",
-                 log_file="server.log"):
+                 log_file="server.log", pad_time=0):
     s = socket.socket()
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     s.bind((ip, port))
@@ -88,6 +88,7 @@ def start_server(ip, port, client_num=4, formalism="KET",
         for s in readable:
             msgs = recv_msg_with_length(s)
             for msg in msgs:
+                sleep(pad_time)
                 return_val = None
 
                 tick = time()

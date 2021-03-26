@@ -2,7 +2,7 @@ from collections import defaultdict
 from socket import socket
 from pickle import loads, dumps
 from typing import List, TYPE_CHECKING, Any
-from time import time
+from time import time, sleep
 from uuid import uuid4
 
 if TYPE_CHECKING:
@@ -56,6 +56,11 @@ class QuantumManagerClient():
             raise Exception(
                 "Invalid formalim {} given; should be 'KET' or 'DENSITY'".format(
                     formalism))
+
+        self.pad_time = 0
+
+    def set_pad_time(self, pad_time: float):
+        self.pad_time = pad_time
 
     def set_timeline(self, tl: "ParallelTimeline"):
         self.timeline = tl
@@ -188,6 +193,7 @@ class QuantumManagerClient():
     def flush_message_buffer(self):
         if len(self.message_buffer) > 0:
             tick = time()
+            sleep(self.pad_time)
             send_msg_with_length(self.socket, self.message_buffer)
             self.io_time += time() - tick
             self.message_buffer = []
