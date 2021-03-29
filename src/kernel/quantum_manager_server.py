@@ -88,10 +88,11 @@ def start_server(ip, port, client_num=4, formalism="KET",
         for s in readable:
             msgs = recv_msg_with_length(s)
             for msg in msgs:
-                sleep(pad_time)
                 return_val = None
 
                 tick = time()
+                sleep(pad_time)
+
                 if msg.type == QuantumManagerMsgType.CLOSE:
                     s.close()
                     sockets.remove(s)
