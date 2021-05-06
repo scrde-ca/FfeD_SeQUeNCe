@@ -139,9 +139,10 @@ class QuantumChannel(OpticalChannel):
         """
 
         log.logger.info(
-            "{} send qubit with state {} to {} by Channel {}".format(
-                self.sender.name, qubit.quantum_state.state, self.receiver,
-                self.name))
+            "{} send qubit {} to {} by Channel {}".format(self.sender.name,
+                                                          qubit,
+                                                          self.receiver,
+                                                          self.name))
 
         assert self.delay != 0 and self.loss != 1, "QuantumChannel init() function has not been run for {}".format(self.name)
         assert source == self.sender

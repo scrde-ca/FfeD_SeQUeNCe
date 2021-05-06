@@ -36,8 +36,8 @@ class Photon():
             quantum_state (List[complex]): complex coefficients for photon's quantum state (default [1, 0]).
         """
 
-        self.name = name
-        self.wavelength = wavelength
+        # self.name = name
+        # self.wavelength = wavelength
         self.location = location
         self.encoding_type = encoding_type
         if self.encoding_type["name"] == "single_atom":
@@ -45,8 +45,8 @@ class Photon():
             self.detector_num = None
             self.loss = 0
 
-        self.quantum_state = QuantumState()
-        self.quantum_state.state = quantum_state
+        # self.quantum_state = QuantumState()
+        # self.quantum_state.state = quantum_state
         self.qstate_key = None
         self.is_null = False
 
