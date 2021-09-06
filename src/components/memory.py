@@ -303,12 +303,18 @@ class AbsorptiveMemory(Entity):
     """Atomic ensemble absorptive memory.
 
     This class models an AFC(-spinwave) absorptive memory, where the quantum state is stored as collective excitation of atomic ensemble.
-    Retrieved photon sequence might be reversed (only for AFC spinwave), which is physically determined by RF pulses used during spinwave.
-    This class does not support qubit state manipulation, individual photons should be manipulated instead.
-    Before invoking methods like "get" and "retrieve", need to call "prepare" first to prepare the AFC, will take finite simulation time.
     Rephasing time (predetermined storage time for AFC type) is given by temporal mode number and length of each temporal mode bin.
+    This class does not support qubit state manipulation, individual photons should be manipulated instead.
+
+    Before invoking methods like "get" and "retrieve", need to call "prepare" first to prepare the AFC, will take finite simulation time.
+    Retrieved photon sequence might be reversed (only for AFC-spinwave), which is physically determined by RF pulses used during spinwave.
     Note that for AFC (not spinwave) type, is_reversed must be False.
-    Note that the memory is reusable as long as AFC structure is still usable.
+
+    Note that the memory is reusable (available for other rounds of absorption) as long as AFC structure is still usable.
+    Once AFC structure expires the memory also expires, and the memory needs to be re-prepared so stored photons cannot be retrieved.
+    Spinwave coherence time determines whether a certain cycle of absorption and re-emission will be successful.
+    Eg. If on-demand storage time is longer than spinwave coherence time, the information stored in this cycle will be cleared.
+        However, if the AFC structure retains usability (in this example AFC_lifetime > coherence_time), the memory itself is not expired.
 
     Attributes:
         name (str): label for memory instance.
@@ -319,7 +325,8 @@ class AbsorptiveMemory(Entity):
         efficiency (Callable): probability of emitting a photon as a function of storage time.
         mode_number (int): number of temporal modes available for storing photons, i.e. number of peaks in Atomic Frequency Comb.
         mode_bin (int):
-        AFC_lifetime (float): average usable lifetime of AFC structure (in s).
+        AFC_lifetime (float): average usable lifetime of AFC structure (in s), 0 means infinite lifetime.
+        coherence_time (float): average usable lifetime of spinwave storage (spinwave transition coherence time) (in s), 0 means infinite coherence time.
         wavelength (float): wavelength (in nm) of absorbed and emitted photons.
         total_time (float): AFC re-phasing time (in ps)
         overlap_error (float): error due to photon overlap in one temporal mode, will degrade fidelity.
@@ -333,12 +340,12 @@ class AbsorptiveMemory(Entity):
         memory_array (MemoryArray): memory array aggregating current memory.
         destination (str): name of predetermined re-emission destination node, default None.
         entangled_memory (Dict[str, Any]): tracks entanglement state of memory with a memory.
-        stored_photons (Dict[str, Any]): photons stored in memory temporal modes.
+        stored_photons (List[Dict]): photons stored in memory temporal modes.
     """
 
     def __init__(self, name: str, timeline: "Timeline", fidelity: float, frequency: float, absorption_efficiency: float,
-                 efficiency: Callable, mode_number: int, AFC_lifetime: float, wavelength: int, overlap_error: float,
-                 prepare_time: int, is_spinwave=False, is_reversed=False, destination=None):
+                 efficiency: Callable, mode_number: int, AFC_lifetime: float, coherence_time: float, wavelength: int, 
+                 overlap_error: float, prepare_time: int, is_spinwave=False, is_reversed=False, destination=None):
         """Constructor for the AbsorptiveMemory class.
 
         Args:
@@ -349,7 +356,8 @@ class AbsorptiveMemory(Entity):
             absorption_efficiency (float): probability of absorbing a photon when arriving at the memory.
             efficiency (Callable): probability of emitting a photon as a function of storage time.
             mode_number (int): number of modes supported for storing photons.
-            AFC_lifetime (float): average usable lifetime of AFC structure (in s).
+            AFC_lifetime (float): average usable lifetime of AFC structure (in s), 0 means infinite lifetime.
+            coherence_time (float): average usable lifetime of spinwave storage (spinwave transition coherence time) (in s), 0 means infinite coherence time.
             wavelength (int): wavelength (in nm) of photons emitted by memories.
             overlap_error (float): error due to photon overlap in one temporal mode.
             prepare_time (float): time to prepare AFC (in ps).
@@ -368,10 +376,11 @@ class AbsorptiveMemory(Entity):
         self.absorption_efficiency = absorption_efficiency
         self.efficiency = efficiency
         self.mode_number = mode_number
-        self.AFC_lifetime = AFC_lifetime  # AFC lifetime in seconds
+        self.AFC_lifetime = AFC_lifetime # AFC lifetime in seconds
+        self.coherence_time = coherence_time # spinwave coherencetime in seconds
         self.wavelength = wavelength
-        self.mode_bin = 1e12 / self.frequency  # time bin for each separate temporal mode
-        self.total_time = self.mode_number * self.mode_bin  # AFC rephasing time
+        self.mode_bin = 1e12 / self.frequency  # time bin for each separate temporal mode in ps
+        self.total_time = self.mode_number * self.mode_bin  # AFC rephasing time in ps
         self.overlap_error = overlap_error
         self.prepare_time = prepare_time
 
@@ -400,8 +409,6 @@ class AbsorptiveMemory(Entity):
 
         # initialization of stored_photons dictionary
         self.stored_photons = [None] * self.mode_number
-        # for idx in range(self.mode_number):
-        #     self.stored_photons[idx] = None
 
     def init(self):
         """Implementation of Entity interface (see base class)."""
@@ -440,7 +447,6 @@ class AbsorptiveMemory(Entity):
             self.is_prepared = True
 
             # schedule AFC expiration once it is prepared
-            # TODO check if this way of AFC lifetime count down is reasonable
             if self.AFC_lifetime > 0:
                 self._schedule_expiration()
 
@@ -466,6 +472,9 @@ class AbsorptiveMemory(Entity):
                 process = Process(self, "retrieve", [])
                 event = Event(self.absorb_start_time + self.total_time, process)
                 self.timeline.schedule(event)
+            else:
+                # if spinwave type, schedule spinwave decoherence induced storage resetting
+                self._schedule_storage_reset()
 
         # determine which temporal mode the photon is stored in
         absorb_time = now - self.absorb_start_time
@@ -490,8 +499,9 @@ class AbsorptiveMemory(Entity):
         """
 
         # AFC needs to be prepared first
+        # for simplicity, do not allow memory to re-emit if AFC expires
         if not self.is_prepared:
-            raise Exception("AFC is not prepared yet.")
+            raise Exception("AFC is not prepared yet or has expired.")
 
         # do nothing if there are no photons stored
         if len(self.excited_photons) == 0:
@@ -500,7 +510,6 @@ class AbsorptiveMemory(Entity):
         now = self.timeline.now()
         store_time = now - self.absorb_start_time - self.total_time
 
-        # TODO: clear locally stored photons
         for index in range(self.mode_number):
             if self.stored_photons[index] is not None:
                 if random.random_sample() < self.efficiency(store_time):
@@ -525,25 +534,22 @@ class AbsorptiveMemory(Entity):
 
         # clear entanglement and storage information after re-emission
         # retrieval will re-emit all stored photons and information should no longer be stored
-        # TODO check if this treatment is reasonable
-        self.fidelity = 0
-        self.entangled_memory = {'node_id': None, 'memo_id': None}
-        self.photon_counter = 0
-        self.absorb_start_time = 0
-        self.excited_photons = []
+        # clearance unified as storage_reset method
+        self.storage_reset()
         
     def expire(self) -> None:
-        """Method to handle memory expiration.
+        """Method to handle memory expiration due to AFC expiration.
 
         Side Effects:
             Will notify upper entities of expiration via the `pop` interface.
-            Will modify the quantum state of the memory.
+            Will modify information stored by the memory.
         """
 
         # AFC needs to be prepared first
         if not self.is_prepared:
             raise Exception("AFC is not prepared yet.")
 
+        # if stored photons have not been re-emitted when memory expires
         if self.excited_photons:
             for i in range(len(self.excited_photons)):
                 self.excited_photons[i].is_null = True
@@ -556,23 +562,34 @@ class AbsorptiveMemory(Entity):
         """Method to clear quantum memory.
 
         Will reset memory state to no photon stored and will clear entanglement information.
+        Will reset AFC to unprepared state.
 
         Side Effects:
             Will modify internal parameters and photon storage information.
         """
 
-        self.fidelity = 0
-        self.entangled_memory = {'node_id': None, 'memo_id': None}
-        self.photon_counter = 0
-        self.absorb_start_time = 0
-        self.excited_photons = []
+        self.storage_reset()
         self.is_prepared = False
 
         if self.expiration_event is not None:
             self.timeline.remove_event(self.expiration_event)
             self.expiration_event = None
 
+    def storage_reset(self) -> None:
+        """Method to clear information stored in one cycle of photon storage."""
+
+        self.fidelity = 0
+        self.entangled_memory = {'node_id': None, 'memo_id': None}
+        self.photon_counter = 0
+        self.absorb_start_time = 0
+        # no photon should be retrieved after storage reset
+        # re-emitted photons' is_null attribute should not be modified when memory expires
+        self.excited_photons = []
+        self.stored_photons = [None] * self.mode_number
+
     def _schedule_expiration(self) -> None:
+        """Schedule the expiration of memory according to AFC lifetime."""
+
         if self.expiration_event is not None:
             self.timeline.remove_event(self.expiration_event)
 
@@ -582,6 +599,18 @@ class AbsorptiveMemory(Entity):
         self.timeline.schedule(event)
 
         self.expiration_event = event
+
+    def _schedule_storage_reset(self) -> None:
+        """Schedule the resetting of a cycle of photon storage in spinwave.
+        
+        Only invoked when the memory type is AFC-spinwave.
+        Storage resetting time is determined by AFC rephasing time and spinwave coherence time.
+        """
+
+        reset_time = self.timeline.now() + int(self.total_time + self.coherence_time * 1e12)
+        process = Process(self, "storage_reset", [])
+        event = Event(reset_time, process)
+        self.timeline.schedule(event)
 
     def update_expire_time(self, time: int):
         """Method to change time of expiration.
