@@ -38,6 +38,7 @@ class QuantumManagerClient():
         self.managed_qubits = set()
         self.io_time = 0
         self.type_counter = defaultdict(lambda: 0)
+        self.client_call_counter = 0
         self.message_buffer = []
 
         self.socket.connect((self.ip, self.port))
@@ -72,6 +73,7 @@ class QuantumManagerClient():
         Returns:
             int: key for the new state generated.
         """
+        self.client_call_counter += 1
         key = uuid4().int
         # below code cannot be removed because the assertion in the
         # move_manage_to_client function
@@ -80,6 +82,7 @@ class QuantumManagerClient():
         return key
 
     def get(self, key: int) -> any:
+        self.client_call_counter += 1
         if self._check_local([key]):
             return self.qm.get(key)
         else:
@@ -90,6 +93,7 @@ class QuantumManagerClient():
             return state
 
     def run_circuit(self, circuit: "Circuit", keys: List[int], meas_samp=None) -> any:
+        self.client_call_counter += 1
         if self._check_local(keys):
             return self.qm.run_circuit(circuit, keys, meas_samp)
         else:
@@ -131,6 +135,7 @@ class QuantumManagerClient():
             return ret_val
 
     def set(self, keys: List[int], amplitudes: any) -> None:
+        self.client_call_counter += 1
         if self._check_local(keys):
             self.qm.set(keys, amplitudes)
         elif all(key in self.qm.states for key in keys):
@@ -142,6 +147,7 @@ class QuantumManagerClient():
                                False)
 
     def remove(self, key: int) -> None:
+        self.client_call_counter += 1
         self._send_message(QuantumManagerMsgType.REMOVE, [key], [])
         self.qm.remove(key)
 
@@ -152,6 +158,7 @@ class QuantumManagerClient():
             Will end all processes of remote server.
             Will set the `connected` attribute to False.
         """
+        self.client_call_counter += 1
         self._send_message(QuantumManagerMsgType.TERMINATE, [], [],
                            expecting_receive=False)
 
