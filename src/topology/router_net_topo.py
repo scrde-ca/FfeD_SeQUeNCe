@@ -1,6 +1,6 @@
 from json import load
 from mpi4py import MPI
-from networkx import Graph, dijkstra_path
+from networkx import Graph, dijkstra_path, exception
 from numpy import mean
 
 from .topology import Topology as Topo
@@ -223,11 +223,14 @@ class RouterNetTopo(Topo):
             for dst_name in graph.nodes:
                 if src.name == dst_name:
                     continue
-                if dst_name > src.name:
-                    path = dijkstra_path(graph, src.name, dst_name)
-                else:
-                    path = dijkstra_path(graph, dst_name, src.name)[::-1]
-                next_hop = path[1]
-                # routing protocol locates at the bottom of the protocol stack
-                routing_protocol = src.network_manager.protocol_stack[0]
-                routing_protocol.add_forwarding_rule(dst_name, next_hop)
+                try:
+                    if dst_name > src.name:
+                        path = dijkstra_path(graph, src.name, dst_name)
+                    else:
+                        path = dijkstra_path(graph, dst_name, src.name)[::-1]
+                    next_hop = path[1]
+                    # routing protocol locates at the bottom of the stack
+                    routing_protocol = src.network_manager.protocol_stack[0]
+                    routing_protocol.add_forwarding_rule(dst_name, next_hop)
+                except exception.NetworkXNoPath:
+                    pass
