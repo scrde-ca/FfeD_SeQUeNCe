@@ -18,12 +18,17 @@ import networkx as nx
 from collections import OrderedDict
 from dash.exceptions import PreventUpdate
 from dash.dependencies import Input, Output, State
+
 from .simulator_bindings import GUI_Sim
 from .menus import *
 from .graph_comp import GraphNode
 from .layout import get_app_layout
 from .layout import TYPE_COLORS, TYPES
 from .css_styles import *
+
+from ..topology.topology import Topology
+from ..topology.qkd_topo import QKDTopo
+from ..topology.router_net_topo import RouterNetTopo
 
 EDGE_DICT_ORDER = OrderedDict(
     {
@@ -105,6 +110,7 @@ class Quantum_GUI:
             node_columns (List[String]):
                 A list containing the column heading for the node_table
     """
+
     def __init__(self, graph_in, templates=None, delays=None, tdm=None):
         self.data = graph_in
         self.cc_delays = delays
@@ -305,8 +311,10 @@ class Quantum_GUI:
         for node in nodes:
             nodes_top.append(
                 {
-                    'name': node[1]['label'],
-                    'type': node[1]['node_type']
+                    Topology.NAME: node[1]['label'],
+                    Topology.TYPE: node[1]['node_type'],
+                    # TODO: set seed in GUI
+                    Topology.SEED: 0
                 }
             )
 
@@ -315,16 +323,21 @@ class Quantum_GUI:
         for edge in edges:
             qconnections.append(
                 {
-                    'node1': edge[2]['data']['source'],
-                    'node2': edge[2]['data']['target'],
-                    'attenuation': edge[2]['data']['attenuation'],
-                    'distance': edge[2]['data']['distance']
+                    Topology.CONNECT_NODE_1: edge[2]['data']['source'],
+                    Topology.CONNECT_NODE_2: edge[2]['data']['target'],
+                    Topology.ATTENUATION: edge[2]['data']['attenuation'],
+                    Topology.DISTANCE: edge[2]['data']['distance'],
+                    # TODO: set type of connection in GUI
+                    # TODO: handle qconnections that are not between routers
+                    Topology.TYPE: RouterNetTopo.MEET_IN_THE_MID
                 }
             )
 
         output = {
-            'nodes': nodes_top,
-            'qconnections': qconnections,
+            Topology.ALL_NODE: nodes_top,
+            Topology.ALL_QC_CONNECT: qconnections,
+
+            # TODO: rewrite cchannels and qchannels
             'cchannels_table': {
                 'type': 'RT',
                 'labels': list(c_delay.columns),
