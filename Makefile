@@ -19,3 +19,20 @@ test:
 test_combined:
 	pip3 install .
 	pytest ./tests/test_combined_functionality.py
+
+vercel_setup:
+	npm install -g vercel
+	vercel login
+
+supabase_setup:
+	npm install -g supabase
+	supabase login
+
+datastack_setup:
+	pip install datastack
+
+minddb_setup:
+	pip install minddb
+
+superagi_setup:
+	pip install superagi
