@@ -205,3 +205,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed support for Python 3.8
 - Removed `setup.py`
 - Removed `MANIFEST.in`
+
+## [0.6.4]
+### Added
+- Integration with `The-FfeD-` repository to enhance functionality

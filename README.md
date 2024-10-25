@@ -82,6 +82,28 @@ These examples include:
 * `two_node_eg.ipynb`, which performs entanglement generation between two adjacent quantum routers
 * `three_node_eg_ep_es.ipynb`, which performs entanglement generation, purification, and swapping for a linear network of three quantum routers
 
+## Integration with The-FfeD- Repository
+This repository has been integrated with the [The-FfeD-](https://github.com/Celebrum/The-FfeD-.git) repository to enhance its functionality. The combined functionality allows users to leverage the features of both repositories seamlessly.
+
+### Instructions for Using Combined Functionality
+1. Clone the integrated repository:
+   ```
+   git clone https://github.com/scrde-ca/FfeD_SeQUeNCe.git
+   cd FfeD_SeQUeNCe
+   ```
+
+2. Install the required dependencies:
+   ```
+   pip install -r requirements.txt
+   ```
+
+3. Run the combined functionality tests to ensure everything is set up correctly:
+   ```
+   make test_combined
+   ```
+
+4. Refer to the documentation in both repositories for detailed usage instructions and examples.
+
 ## Additional Tools
 
 ### Network Visualization
