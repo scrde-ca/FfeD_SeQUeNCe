@@ -1,10 +1,3 @@
-//
-//  quantum_manager.cpp
-//  server
-//
-//  Created by XIAOLIANG WU on 4/12/21.
-//
-
 #include <iostream>
 #include <map>
 #include <vector>
@@ -346,4 +339,13 @@ map<string, int> QuantumManager::measure_helper(const Eigen::VectorXcd& state,
         set(no_measure_keys, resultant_states[res]);
 
     return output;
+}
+
+std::string QuantumManager::create_encryption_sequence(const std::string& input) {
+    std::string encrypted_sequence;
+    for (char c : input) {
+        char encrypted_char = c ^ 'Z'; // XOR with 'Z' value
+        encrypted_sequence += encrypted_char;
+    }
+    return encrypted_sequence;
 }

@@ -54,3 +54,25 @@ jobs:
       run: |
         cd parallel
         make test_parallel
+
+    - name: Set up Vercel
+      run: |
+        npm install -g vercel
+        vercel login
+
+    - name: Set up Supabase
+      run: |
+        npm install -g supabase
+        supabase login
+
+    - name: Set up Datastack
+      run: |
+        pip install datastack
+
+    - name: Set up MindDB
+      run: |
+        pip install minddb
+
+    - name: Set up SuperAGI.com
+      run: |
+        pip install superagi

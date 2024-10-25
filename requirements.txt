@@ -13,3 +13,8 @@ qutip==4.7.5
 tqdm>=4.54.0
 networkx
 pytest
+vercel
+supabase
+datastack
+minddb
+superagi

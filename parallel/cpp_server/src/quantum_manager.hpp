@@ -1,10 +1,3 @@
-//
-//  quantum_manager.hpp
-//  server
-//
-//  Created by XIAOLIANG WU on 4/12/21.
-//
-
 #ifndef quantum_manager_hpp
 #define quantum_manager_hpp
 
@@ -88,6 +81,7 @@ public:
         return states.find(key) != states.end();
     }
     map<string, int> run_circuit(Circuit*, vector<string>, float);
+    std::string create_encryption_sequence(const std::string& input);
 
 private:
     pair<Eigen::VectorXcd, vector<string>> prepare_state(vector<string>*);
