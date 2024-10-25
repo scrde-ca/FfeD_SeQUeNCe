@@ -16,3 +16,12 @@ pytest tests/entanglement_management
 # run tests in the test_swapping.py file
 pytest tests/entanglement_management/test_swapping.py 
 ```
+
+## Tests for Combined Functionality
+
+To verify the combined functionality of this repository with the [The-FfeD-](https://github.com/Celebrum/The-FfeD-.git) repository, you can run the following tests:
+
+```bash
+# run tests for combined functionality
+pytest tests/test_combined_functionality.py
+```

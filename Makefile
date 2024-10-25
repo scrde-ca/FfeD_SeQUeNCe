@@ -15,3 +15,7 @@ jupyter:
 test:
 	pip3 install .
 	pytest ./tests
+
+test_combined:
+	pip3 install .
+	pytest ./tests/test_combined_functionality.py
